@@ -8,15 +8,32 @@ const app = express();
 
 app.use(express.json());
 
-app.use("/customer",session({secret:"fingerprint_customer",resave: true, saveUninitialized: true}))
+app.use("/customer", session({ secret: "fingerprint_customer", resave: true, saveUninitialized: true }));
 
-app.use("/customer/auth/*", function auth(req,res,next){
-//Write the authenication mechanism here
+app.use("/customer/auth/*", function auth(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        console.log('Token not provided');
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    jwt.verify(token, 'your_secret_key', (err, user) => {
+        if (err) {
+            console.log('Token verification failed:', err.message);
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+
+        req.user = user;
+        console.log('Token verified, user:', user);
+        next();
+    });
 });
- 
-const PORT =5000;
+
+const PORT = 8000;
 
 app.use("/customer", customer_routes);
 app.use("/", genl_routes);
 
-app.listen(PORT,()=>console.log("Server is running"));
+app.listen(PORT, () => console.log(`Server is running on PORT: ${PORT}`));
